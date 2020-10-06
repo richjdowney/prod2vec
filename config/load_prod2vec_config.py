@@ -3,6 +3,33 @@ import yaml
 import pydantic
 
 
+class ConfigDefaultArgs(pydantic.BaseModel):
+    """Configuration for the default args when setting up the DAG"""
+
+    owner: str
+    start_date: str
+    end_date: str
+    depends_on_past: bool
+    retries: int
+    catchup: bool
+    email: str
+    email_on_failure: bool
+    email_on_retry: bool
+
+
+class ConfigDag(pydantic.BaseModel):
+    """Configuration for the DAG runs"""
+
+    # Name for the DAG run
+    dag_id: str
+
+    # Default args for DAG run e.g. owner, start_date, end_date
+    default_args: ConfigDefaultArgs
+
+    # DAG schedule interval
+    schedule_interval: str
+
+
 class ConfigS3(pydantic.BaseModel):
     """Configuration for the s3 buckets and keys"""
 
@@ -55,6 +82,7 @@ class Config(pydantic.BaseModel):
     preprocess_constants: ConfigPreprocess
     model_train_constants: ConfigModelTrainConstants
     hyperparameter: ConfigHyperparameter
+    dag: ConfigDag
 
 
 class ConfigException(Exception):
