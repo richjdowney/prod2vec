@@ -1,0 +1,1 @@
+config_path = "C:\case_work\data_engineering_capstone\config\prod2vec_config.yaml"

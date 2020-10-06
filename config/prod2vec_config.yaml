@@ -1,0 +1,41 @@
+s3:
+
+  # Config for s3
+  Bucket: "instacart-kaggle-data"
+  Orders_key: "order_products__train.csv"
+  Products_key: "products.csv"
+  Couples_list_train_key: "couples_list_train.txt"
+  Couples_list_valid_key: "couples_list_valid.txt"
+  Labels_list_train_key: "labels_list_train.txt"
+  Labels_list_valid_key: "labels_list_valid.txt"
+  Prod_target_train_key: "prod_target_train.csv"
+  Prod_target_valid_key: "prod_target_valid.csv"
+  Prod_context_train_key: "prod_context_train.csv"
+  Prod_context_valid_key: "prod_context_valid.csv"
+  Reversed_dict_key: "reversed_dictionary.pkl"
+  Products_dict_key: "products_dict.pkl"
+
+preprocess_constants:
+
+  # Config for data pre-processing
+  num_prods: 10000
+  train_ratio: 0.8
+  train_window_size: 5
+
+model_train_constants:
+
+  # Config for model training
+  Entry_point: "C:\case_work\prod2vec\src\model_train\model_train.py"
+  Epochs: 100000
+  Valid_size: 100
+  Valid_window: 1000
+  Num_folds: 5
+
+hyperparameter:
+
+  # Config for hyper-parameter tuning
+  Epochs: 10000
+  Min_embeddings: 100
+  Max_embeddings: 500
+  Min_learning_rate: 0.01
+  Max_learning_rate: 0.5
