@@ -41,7 +41,7 @@ preprocess_constants:
 model_train_constants:
 
   # Config for model training
-  Entry_point: "C:\case_work\prod2vec\src\model_train\model_train.py"
+  Entry_point: "/home/ubuntu/prod2vec/src/model_train/model_train.py"
   Epochs: 100000
   Valid_size: 100
   Valid_window: 1000
@@ -55,3 +55,5 @@ hyperparameter:
   Max_embeddings: 500
   Min_learning_rate: 0.01
   Max_learning_rate: 0.5
+  Max_jobs: 10
+  Max_parallel_jobs: 10

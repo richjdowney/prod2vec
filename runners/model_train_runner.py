@@ -1,6 +1,7 @@
 from sagemaker.tensorflow import TensorFlow
 from sagemaker import get_execution_role
 from sagemaker.tuner import IntegerParameter, HyperparameterTuner, ContinuousParameter
+from keras.models import load_model
 from urllib.parse import urlparse
 import tarfile
 import os
@@ -42,8 +43,8 @@ tf_hyperparameter_tuner = HyperparameterTuner(
     objective_metric_name="loss",
     objective_type="Minimize",
     metric_definitions=[{"Name": "loss", "Regex": "loss: ([0-9\\.]+)"}],
-    max_jobs=10,
-    max_parallel_jobs=10,
+    max_jobs=config["hyperparameter"]["Max_jobs"],
+    max_parallel_jobs=config["hyperparameter"]["Max_parallel_jobs"],
     hyperparameter_ranges={
         "num_embeddings": IntegerParameter(
             config["hyperparameter"]["Min_embeddings"],
@@ -77,14 +78,16 @@ log.info('hyper-parameter tuning analysis')
 tuning_analysis.head()
 
 # Plot the value of hyper-parameters over the tuning window
-plot_hyperparams_over_search(
+params_over_search = plot_hyperparams_over_search(
     df=tuning_analysis, hyperparams=["num_embeddings", "learning_rate"]
 )
+params_over_search.savefig('params_over_search.png')
 
 # Create a kde plot of hyper-parameters used over the tuning window
-plot_search_dist(
+search_kde = plot_search_dist(
     df=tuning_analysis, hyperparams=["num_embeddings", "learning_rate"]
 )
+search_kde.savefig('search_kde.png')
 
 log.info('Re-fitting best model')
 # Get the best hyper-parameters and refit the model over the training data with the best params
