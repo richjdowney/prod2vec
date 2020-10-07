@@ -1,3 +1,7 @@
+import sys
+sys.path.insert(1, '/home/ubuntu/prod2vec')
+
+
 from sagemaker.tensorflow import TensorFlow
 from sagemaker import get_execution_role
 from sagemaker.tuner import IntegerParameter, HyperparameterTuner, ContinuousParameter

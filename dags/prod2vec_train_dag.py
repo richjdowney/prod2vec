@@ -1,6 +1,9 @@
+import sys
+sys.path.insert(1, '/home/ubuntu/prod2vec')
+
 from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
-from config.load_prod2vec_config import load_yaml
+from config.load_prod2vec_config import load_yaml, Config
 from config import constants
 from utils.logging_framework import log
 
@@ -18,14 +21,14 @@ with DAG(**config["dag"]) as dag:
     # Pre-process the data to get the target/context pairs required by the prod2vec model
     pre_process_data = BashOperator(
         task_id="pre_process_data",
-        bash_command="python /home/ubuntu/prod2vec/runners/data_preprocessing_runner.py",
+        bash_command="python3 /home/ubuntu/prod2vec/runners/data_preprocessing_runner.py",
         run_as_user="airflow",
     )
 
     # Pre-process the data to get the target/context pairs required by the prod2vec model
     train_prod2vec = BashOperator(
         task_id="train_prod2vec",
-        bash_command="python /home/ubuntu/prod2vec/runners/model_train_runner.py",
+        bash_command="python3 /home/ubuntu/prod2vec/runners/model_train_runner.py",
         run_as_user="airflow",
     )
 

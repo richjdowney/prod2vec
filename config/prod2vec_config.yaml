@@ -4,8 +4,8 @@ dag:
   dag_id: "Train_prod2vec_model"
   default_args:
     owner: "Rich"
-    start_date: 2020-10-03
-    end_date: 2020-10-03
+    start_date: "2020-10-03"
+    end_date: "2020-10-03"
     depends_on_past: False
     retries: 0
     catchup: False

@@ -1,3 +1,7 @@
+import sys
+sys.path.insert(1, '/home/ubuntu/prod2vec')
+
+
 from src.data_preprocessing.data_prep_helpers import *
 from utils.logging_framework import log
 from config.load_prod2vec_config import load_yaml
@@ -8,11 +12,11 @@ config = load_yaml(constants.config_path)
 # Read the orders and products data from s3
 log.info("Reading orders and products data from s3")
 orders_data = read_csv_from_s3(
-    bucket=config["s3"]["bucket"], key=config["s3"]["Orders_key"]
+    bucket=config["s3"]["Bucket"], key=config["s3"]["Orders_key"]
 )
 
 products = read_csv_from_s3(
-    bucket=config["s3"]["bucket"], key=config["s3"]["Products_key"]
+    bucket=config["s3"]["Bucket"], key=config["s3"]["Products_key"]
 )
 
 log.info(
