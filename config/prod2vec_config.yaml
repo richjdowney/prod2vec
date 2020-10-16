@@ -17,19 +17,19 @@ dag:
 s3:
 
   # Config for s3
-  Bucket: "instacart-kaggle-data"
-  Orders_key: "order_products__train.csv"
-  Products_key: "products.csv"
-  Couples_list_train_key: "couples_list_train.txt"
-  Couples_list_valid_key: "couples_list_valid.txt"
-  Labels_list_train_key: "labels_list_train.txt"
-  Labels_list_valid_key: "labels_list_valid.txt"
-  Prod_target_train_key: "prod_target_train.csv"
-  Prod_target_valid_key: "prod_target_valid.csv"
-  Prod_context_train_key: "prod_context_train.csv"
-  Prod_context_valid_key: "prod_context_valid.csv"
-  Reversed_dict_key: "reversed_dictionary.pkl"
-  Products_dict_key: "products_dict.pkl"
+  bucket: "instacart-kaggle-data"
+  orders_key: "order_products__train.csv"
+  products_key: "products.csv"
+  couples_list_train_key: "couples_list_train.txt"
+  couples_list_valid_key: "couples_list_valid.txt"
+  labels_list_train_key: "labels_list_train.txt"
+  labels_list_valid_key: "labels_list_valid.txt"
+  prod_target_train_key: "prod_target_train.csv"
+  prod_target_valid_key: "prod_target_valid.csv"
+  prod_context_train_key: "prod_context_train.csv"
+  prod_context_valid_key: "prod_context_valid.csv"
+  reversed_dict_key: "reversed_dictionary.pkl"
+  products_dict_key: "products_dict.pkl"
 
 preprocess_constants:
 
@@ -38,22 +38,33 @@ preprocess_constants:
   train_ratio: 0.8
   train_window_size: 5
 
-model_train_constants:
 
-  # Config for model training
-  Entry_point: "/home/ubuntu/prod2vec/src/model_train/model_train.py"
-  Epochs: 100000
-  Valid_size: 100
-  Valid_window: 1000
-  Num_folds: 5
+estimator_config:
 
-hyperparameter:
+  # Config for training and tuning estimator
+  static_params:
+    entry_point: "/home/ubuntu/prod2vec/pipeline/model_train/model_train.py"
+    run_hyperparameter_opt: "yes"
+    epochs: 100
+    num_folds: 5
+    valid_size: 100
+    valid_window: 1000
+    cross_validate: False
+    metric_definitions:
+    - Name: loss
+      Regex: "loss: ([0-9\\.]+)"
+    objective_metric_name: "loss"
+    objective_type: "Minimize"
+  train_hyperparameters:
+    embeddings: 400
+    learning_rate: 0.1
+  tune_hyperparameters:
+    max_jobs: 2
+    max_parallel_jobs: 2
+    min_embeddings: 100
+    max_embeddings: 500
+    min_learning_rate: 0.01
+    max_learning_rate: 0.5
+  inputs:
+    train: "s3://instacart-kaggle-data"
 
-  # Config for hyper-parameter tuning
-  Epochs: 10000
-  Min_embeddings: 100
-  Max_embeddings: 500
-  Min_learning_rate: 0.01
-  Max_learning_rate: 0.5
-  Max_jobs: 10
-  Max_parallel_jobs: 10

@@ -1,12 +1,16 @@
-import numpy as np
+# Keras
 from keras.layers import Embedding, Input, Reshape, Dot, Dense
 from keras import Model
 from keras.optimizers import Adam
+
+# Other packages
+import numpy as np
 import argparse
 import os
 import pickle
+
+# Sklearn
 from sklearn import metrics
-from utils.logging_framework import log
 
 
 class SimilarityCallback:
@@ -27,7 +31,7 @@ class SimilarityCallback:
                 close_prod = reversed_dictionary[nearest[k]]
                 close_prod = products_dict.get(close_prod)
                 log_str = "%s %s," % (log_str, close_prod)
-            log.info(log_str)
+            print(log_str)
 
     @staticmethod
     def _get_sim(valid_prod_idx):
@@ -137,7 +141,7 @@ if __name__ == "__main__":
     )  # Sagemaker is passing the boolean as a string
 
     args = parser.parse_args()
-    log.info("Received arguments {}".format(args))
+    print("Received arguments {}".format(args))
 
     # Loading the list pickles
     with open(
@@ -230,12 +234,12 @@ if __name__ == "__main__":
                         pred_prob.append(float(pred[0]))
 
                     valid_loss = metrics.log_loss(list(labels_list_valid), pred_prob)
-                    log.info(
+                    print(
                         "Fold {}, iteration {}, train_loss={}".format(
                             fold + 1, cnt, train_loss
                         )
                     )
-                    log.info(
+                    print(
                         "Fold {}, iteration {}, valid_loss={}".format(
                             fold + 1, cnt, valid_loss
                         )
@@ -245,7 +249,7 @@ if __name__ == "__main__":
 
         sim_cb.run_sim()
         avg_valid_loss = np.mean(loss_per_fold)
-        log.info("loss: {}".format(avg_valid_loss))
+        print("loss: {}".format(avg_valid_loss))
 
     else:
 
@@ -272,7 +276,7 @@ if __name__ == "__main__":
                     pred_prob.append(float(pred[0]))
 
                 valid_loss = metrics.log_loss(list(labels_list_valid), pred_prob)
-                log.info("iteration {}, valid_loss={}".format(cnt, valid_loss))
+                print("iteration {}, valid_loss={}".format(cnt, valid_loss))
 
         sim_cb.run_sim()
 
@@ -286,6 +290,6 @@ if __name__ == "__main__":
             pred_prob.append(float(pred[0]))
 
         valid_loss = metrics.log_loss(list(labels_list_valid), pred_prob)
-        log.info("loss: {}".format(valid_loss))
+        print("loss: {}".format(valid_loss))
 
         model.save(os.path.join("/opt/ml/model/", "prod2vec_model"))

@@ -1,6 +1,7 @@
 from utils.logging_framework import log
 import yaml
 import pydantic
+from typing import Any, Dict
 
 
 class ConfigDefaultArgs(pydantic.BaseModel):
@@ -33,19 +34,19 @@ class ConfigDag(pydantic.BaseModel):
 class ConfigS3(pydantic.BaseModel):
     """Configuration for the s3 buckets and keys"""
 
-    Bucket: str
-    Orders_key: str
-    Products_key: str
-    Couples_list_train_key: str
-    Couples_list_valid_key: str
-    Labels_list_train_key: str
-    Labels_list_valid_key: str
-    Prod_target_train_key: str
-    Prod_target_valid_key: str
-    Prod_context_train_key: str
-    Prod_context_valid_key: str
-    Reversed_dict_key: str
-    Products_dict_key: str
+    bucket: str
+    orders_key: str
+    products_key: str
+    couples_list_train_key: str
+    couples_list_valid_key: str
+    labels_list_train_key: str
+    labels_list_valid_key: str
+    prod_target_train_key: str
+    prod_target_valid_key: str
+    prod_context_train_key: str
+    prod_context_valid_key: str
+    reversed_dict_key: str
+    products_dict_key: str
 
 
 class ConfigPreprocess(pydantic.BaseModel):
@@ -55,24 +56,48 @@ class ConfigPreprocess(pydantic.BaseModel):
     train_ratio: float
 
 
-class ConfigModelTrainConstants(pydantic.BaseModel):
+class ConfigStaticParams(pydantic.BaseModel):
+    """Configuration for the estimator parameters shared across tuning and training"""
+    run_hyperparameter_opt: str
+    epochs: int
+    num_folds: int
+    valid_size: int
+    valid_window: int
+    cross_validate: bool
+    metric_definitions: list
+    objective_metric_name: str
+    objective_type: str
+
+
+class ConfigTuningHyperparamaters(pydantic.BaseModel):
+    """Configuration for the tuning hyperparameters"""
+
+    max_jobs: int
+    max_parallel_jobs: int
+    min_embeddings: int
+    max_embeddings: int
+    min_learning_rate: float
+    max_learning_rate: float
+
+
+class ConfigTrainHyperparamaters(pydantic.BaseModel):
+    embeddings: int
+    learning_rate: float
+
+
+class ConfigTrainInput(pydantic.BaseModel):
+    """Configuration for the tuning hyperparameters"""
+
+    train: str
+
+
+class ConfigEstimator(pydantic.BaseModel):
     """Configuration for the model training constants"""
 
-    Entry_point: str
-    Epochs: int
-    Valid_size: int
-    Valid_window: int
-    Num_folds: int
-
-
-class ConfigHyperparameter(pydantic.BaseModel):
-    """Configuration for hyper-parameter tuning"""
-
-    Epochs: int
-    Min_embeddings: int
-    Max_embeddings: int
-    Min_learning_rate: float
-    Max_learning_rate: float
+    static_params: ConfigStaticParams
+    train_hyperparameters: ConfigTrainHyperparamaters
+    tune_hyperparameters: ConfigTuningHyperparamaters
+    inputs: ConfigTrainInput
 
 
 class Config(pydantic.BaseModel):
@@ -80,8 +105,7 @@ class Config(pydantic.BaseModel):
 
     s3: ConfigS3
     preprocess_constants: ConfigPreprocess
-    model_train_constants: ConfigModelTrainConstants
-    hyperparameter: ConfigHyperparameter
+    estimator_config: ConfigEstimator
     dag: ConfigDag
 
 
