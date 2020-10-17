@@ -1,10 +1,16 @@
+import sys
+
+sys.path.insert(1, "/home/ubuntu/prod2vec")
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas
+import io
+import boto3
 
 
 def plot_hyperparams_over_search(
-    df: pandas.DataFrame, hyperparams: list
+    df: pandas.DataFrame, hyperparams: list, bucket: str, key: str
 ) -> sns.regplot:
     """Function to plot the value of hyper-parameters over the tuning window
 
@@ -14,6 +20,11 @@ def plot_hyperparams_over_search(
         DataFrame containing the hyper-parameter search results
     hyperparams : list
         list of hyper-parameters used for tuning
+    bucket : str
+        s3 bucket to save plot
+    key : str
+        name of plot to save in s3
+
     Returns
     -------
         sns.regplot object
@@ -39,10 +50,20 @@ def plot_hyperparams_over_search(
             title="{} over Search".format(hyperparams[0]),
         )
 
+    img_data = io.BytesIO()
+    plt.savefig(img_data, format="png")
+    img_data.seek(0)
+
+    s3 = boto3.resource("s3")
+    bucket = s3.Bucket(bucket)
+    bucket.put_object(Body=img_data, ContentType="image/png", Key=key)
+
     return plt.tight_layout()
 
 
-def plot_search_dist(df: pandas.DataFrame, hyperparams: list) -> sns.kdeplot:
+def plot_search_dist(
+    df: pandas.DataFrame, hyperparams: list, bucket: str, key: str
+) -> sns.kdeplot:
     """Function to create a kde plot of hyper-parameters used over the tuning window
 
     Parameters
@@ -51,6 +72,11 @@ def plot_search_dist(df: pandas.DataFrame, hyperparams: list) -> sns.kdeplot:
         DataFrame containing the hyper-parameter search results
     hyperparams : list
         list of hyper-parameters used for tuning
+    bucket : str
+        s3 bucket to save plot
+    key : str
+        name of plot to save in s3
+
     Returns
     -------
         sns.kdeplot object
@@ -76,5 +102,13 @@ def plot_search_dist(df: pandas.DataFrame, hyperparams: list) -> sns.kdeplot:
             ylabel="Density",
             title="{} Search Distribution".format(hyperparams[i]),
         )
+
+    img_data = io.BytesIO()
+    plt.savefig(img_data, format="png")
+    img_data.seek(0)
+
+    s3 = boto3.resource("s3")
+    bucket = s3.Bucket(bucket)
+    bucket.put_object(Body=img_data, ContentType="image/png", Key=key)
 
     return plt.tight_layout()
