@@ -1,5 +1,4 @@
 import sys
-
 sys.path.insert(1, "/home/ubuntu/prod2vec")
 
 from sagemaker.analytics import HyperparameterTuningJobAnalytics
@@ -12,12 +11,12 @@ log.info("Reading config")
 config = load_yaml(constants.config_path)
 
 
-def get_top_tuning_jobs(tuning_job_name: str):
+def get_top_tuning_jobs(job_name: str):
     """ Function to save the hyperparameter tuning analysis to s3
 
         Parameters
         ----------
-        tuning_job_name : str
+        job_name : str
             Name of the hyper-parameter tuning job to analyze
 
         Returns
@@ -28,7 +27,7 @@ def get_top_tuning_jobs(tuning_job_name: str):
     """
 
     # get tuning analytics
-    tuner = HyperparameterTuningJobAnalytics(tuning_job_name)
+    tuner = HyperparameterTuningJobAnalytics(job_name)
     tuning_analysis = tuner.dataframe()
     tuning_analysis.sort_values(by=["TrainingStartTime"], ascending=False, axis=0)
     tuning_analysis["iteration"] = tuning_analysis.index
@@ -38,18 +37,27 @@ def get_top_tuning_jobs(tuning_job_name: str):
 
     log.info("writing tuning analysis to s3")
     tuning_analysis.to_csv(
-        "s3://{}/{}.csv".format(config["s3"]["bucket"], tuning_job_name), index=False
+        "s3://{}/{}.csv".format(config["s3"]["bucket"], job_name), index=False
     )
 
     return tuning_analysis
 
 
-def run_tuning_analysis(tuning_job_name: str):
-    """run the tuning analysis"""
+def run_tuning_analysis(job_name: str):
+    """ Run the tuning analysis
 
-    tuning_analysis = get_top_tuning_jobs(tuning_job_name)
+        Parameters
+        ----------
+        job_name : str
+            Name of the hyper-parameter tuning job
+
+    """
+
+    log.info("Getting tuning analysis for tuning job {}".format(job_name))
+    tuning_analysis = get_top_tuning_jobs(job_name)
 
     # Plot the value of hyper-parameters over the tuning window
+    log.info("Creating tuning analysis plots for tuning job {}".format(job_name))
     plot_hyperparams_over_search(
         df=tuning_analysis,
         hyperparams=["num_embeddings", "learning_rate"],

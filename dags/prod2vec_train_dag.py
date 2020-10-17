@@ -9,6 +9,7 @@ from config import constants
 from utils.logging_framework import log
 from pipeline.data_preprocessing import data_prep
 from pipeline.tuning_analysis import tuning_analysis
+from pipeline.post_processing import post_process
 
 # Airflow
 from airflow import DAG
@@ -116,7 +117,9 @@ tf_train_estimator = TensorFlow(
 
 # train_config specifies SageMaker training configuration
 train_config = training_config(
-    estimator=tf_train_estimator, inputs=config["estimator_config"]["inputs"]
+    estimator=tf_train_estimator,
+    inputs=config["estimator_config"]["inputs"],
+    job_name="hyperparameter-tuner-prod2vec",
 )
 
 # =====================================
@@ -228,7 +231,19 @@ with DAG(**config["dag"]) as dag:
         dag=dag,
         provide_context=False,
         python_callable=tuning_analysis.run_tuning_analysis,
-        op_kwargs={"tuning_job_name": "hyperparameter-tuner-prod2vec"},
+        op_kwargs={"job_name": "hyperparameter-tuner-prod2vec"},
+    )
+
+    # Post processing to save the embeddings
+    post_processing = PythonOperator(
+        task_id="post_processing",
+        dag=dag,
+        provide_context=False,
+        python_callable=post_process.save_embeddings,
+        op_kwargs={"hpo_enabled": hpo_enabled,
+                   "job_name": "hyperparameter-tuner-prod2vec",
+                   "bucket": config["s3"]["bucket"],
+                   "products_key": config["s3"]["products_key"]},
     )
 
 init.set_downstream(pre_process_data)
@@ -236,3 +251,5 @@ pre_process_data.set_downstream(branching)
 branching.set_downstream(train_prod2vec)
 branching.set_downstream(tune_prod2vec)
 tune_prod2vec.set_downstream(tuning_analysis)
+train_prod2vec.set_downstream(post_processing)
+tuning_analysis.set_downstream(post_processing)
