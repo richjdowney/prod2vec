@@ -1,7 +1,6 @@
 from utils.logging_framework import log
 import yaml
 import pydantic
-from typing import Any, Dict
 
 
 class ConfigDefaultArgs(pydantic.BaseModel):
@@ -58,6 +57,7 @@ class ConfigPreprocess(pydantic.BaseModel):
 
 class ConfigStaticParams(pydantic.BaseModel):
     """Configuration for the estimator parameters shared across tuning and training"""
+    run_id: str
     run_hyperparameter_opt: str
     epochs: int
     num_folds: int
@@ -70,7 +70,7 @@ class ConfigStaticParams(pydantic.BaseModel):
 
 
 class ConfigTuningHyperparamaters(pydantic.BaseModel):
-    """Configuration for the tuning hyperparameters"""
+    """Configuration for the tuning hyper-parameters"""
 
     max_jobs: int
     max_parallel_jobs: int
@@ -100,6 +100,10 @@ class ConfigEstimator(pydantic.BaseModel):
     inputs: ConfigTrainInput
 
 
+class ConfigPostProcess(pydantic.BaseModel):
+    """Configuration for post-processing"""
+    model_artifact: str
+
 class Config(pydantic.BaseModel):
     """Main configuration"""
 
@@ -107,6 +111,7 @@ class Config(pydantic.BaseModel):
     preprocess_constants: ConfigPreprocess
     estimator_config: ConfigEstimator
     dag: ConfigDag
+    post_process_config: ConfigPostProcess
 
 
 class ConfigException(Exception):

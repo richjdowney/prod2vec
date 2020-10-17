@@ -21,6 +21,7 @@ from airflow.contrib.operators.sagemaker_training_operator import (
     SageMakerTrainingOperator,
 )
 from airflow.contrib.operators.sagemaker_tuning_operator import SageMakerTuningOperator
+from airflow.utils.trigger_rule import TriggerRule
 
 
 # AWS
@@ -119,7 +120,9 @@ tf_train_estimator = TensorFlow(
 train_config = training_config(
     estimator=tf_train_estimator,
     inputs=config["estimator_config"]["inputs"],
-    job_name="hyperparameter-tuner-prod2vec",
+    job_name="hyperparameter-tuner-prod2vec-{}".format(
+        config["estimator_config"]["static_params"]["run_id"]
+    ),
 )
 
 # =====================================
@@ -178,7 +181,9 @@ prod2vec_tuner = HyperparameterTuner(
 tune_config = tuning_config(
     tuner=prod2vec_tuner,
     inputs=config["estimator_config"]["inputs"],
-    job_name="hyperparameter-tuner-prod2vec",
+    job_name="hyperparameter-tuner-prod2vec-{}".format(
+        config["estimator_config"]["static_params"]["run_id"]
+    ),
 )
 
 # =============================================================================
@@ -231,7 +236,11 @@ with DAG(**config["dag"]) as dag:
         dag=dag,
         provide_context=False,
         python_callable=tuning_analysis.run_tuning_analysis,
-        op_kwargs={"job_name": "hyperparameter-tuner-prod2vec"},
+        op_kwargs={
+            "job_name": "hyperparameter-tuner-prod2vec-{}".format(
+                config["estimator_config"]["static_params"]["run_id"]
+            )
+        },
     )
 
     # Post processing to save the embeddings
@@ -240,11 +249,21 @@ with DAG(**config["dag"]) as dag:
         dag=dag,
         provide_context=False,
         python_callable=post_process.save_embeddings,
-        op_kwargs={"hpo_enabled": hpo_enabled,
-                   "job_name": "hyperparameter-tuner-prod2vec",
-                   "bucket": config["s3"]["bucket"],
-                   "products_key": config["s3"]["products_key"]},
+        trigger_rule=TriggerRule.ONE_SUCCESS,
+        op_kwargs={
+            "hpo_enabled": hpo_enabled,
+            "job_name": "hyperparameter-tuner-prod2vec-{}".format(
+                config["estimator_config"]["static_params"]["run_id"]
+            ),
+            "bucket": config["s3"]["bucket"],
+            "products_key": config["s3"]["products_key"],
+            "run_id": config["estimator_config"]["static_params"]["run_id"],
+            "model_save_loc": config["post_process_config"]["model_artifact"],
+        },
     )
+
+    # End task
+    end = DummyOperator(task_id="finish", dag=dag)
 
 init.set_downstream(pre_process_data)
 pre_process_data.set_downstream(branching)
@@ -253,3 +272,4 @@ branching.set_downstream(tune_prod2vec)
 tune_prod2vec.set_downstream(tuning_analysis)
 train_prod2vec.set_downstream(post_processing)
 tuning_analysis.set_downstream(post_processing)
+post_processing.set_downstream(end)

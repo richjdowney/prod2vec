@@ -40,9 +40,7 @@ def map_weights_to_prods(
     return df
 
 
-def get_model_weights(
-    model: keras.engine.training.Model, layer: int
-) -> pandas.DataFrame:
+def get_model_weights(model: keras.engine.training.Model, layer: int) -> pd.DataFrame:
     """ Function to get model weights from trained model and return them as a Pandas DataFrame
 
         Parameters
@@ -65,7 +63,14 @@ def get_model_weights(
     return embed_weights_pd
 
 
-def save_embeddings(hpo_enabled: bool, job_name: str, bucket: str, products_key: str):
+def save_embeddings(
+    hpo_enabled: bool,
+    job_name: str,
+    bucket: str,
+    products_key: str,
+    run_id: str,
+    model_save_loc: str,
+):
     """ Function to save the embedding weights to s3
 
         Parameters
@@ -78,9 +83,12 @@ def save_embeddings(hpo_enabled: bool, job_name: str, bucket: str, products_key:
             Name of the s3 bucket with the product descriptions and dictionaries
         products_key : str
             Name of the csv file with the product ID to product description lookup
+        run_id : str
+            Identifier for the run
+        model_save_loc : str
+            Location on ec2 to save the model artifacts
 
     """
-
 
     log.info("Running post-processing for tuning job {}".format(job_name))
 
@@ -89,10 +97,12 @@ def save_embeddings(hpo_enabled: bool, job_name: str, bucket: str, products_key:
     log.info("Downloading product descriptions and dictionaries")
 
     # Loading the integer to product_id dictionary
-    with open(
-        os.path.join("s3://{}/".format(bucket), "reversed_dictionary.pkl"), "rb"
-    ) as fp:  # Unpickling
-        reversed_dictionary = pickle.load(fp)
+    s3 = boto3.resource("s3")
+    with open("reversed_dictionary.pkl", "wb") as data:
+        s3.Bucket(bucket).download_fileobj("reversed_dictionary.pkl", data)
+
+    with open("reversed_dictionary.pkl", "rb") as data:
+        reversed_dictionary = pickle.load(data)
 
     # Read the product ID to product description data
     products = read_csv_from_s3(bucket=bucket, key=products_key)
@@ -118,20 +128,20 @@ def save_embeddings(hpo_enabled: bool, job_name: str, bucket: str, products_key:
         "ModelArtifacts"
     ]["S3ModelArtifacts"]
     parsed_url = urlparse(model_data_s3_uri)
-    bucket = parsed_url.netloc
+    model_bucket = parsed_url.netloc
     key = os.path.join(parsed_url.path[1:])
     s3 = boto3.resource("s3")
-    s3.Bucket(bucket).download_file(key, "./model.tar.gz")
+    s3.Bucket(model_bucket).download_file(key, "{}/model.tar.gz".format(model_save_loc))
 
     # ======== Extract and save the embeddings =========
 
     log.info("Extracting and saving the embeddings")
 
-    with tarfile.open("./model.tar.gz") as tar:
-        tar.extractall(path="./")
+    with tarfile.open("{}/model.tar.gz".format(model_save_loc)) as tar:
+        tar.extractall(path="{}/".format(model_save_loc))
 
     # Load the model
-    model = load_model("prod2vec_model")
+    model = load_model("{}/prod2vec_model".format(model_save_loc))
 
     # Get the embedding weights
     embed_weights = get_model_weights(model, 2)
@@ -142,6 +152,7 @@ def save_embeddings(hpo_enabled: bool, job_name: str, bucket: str, products_key:
     )
 
     # Upload embeddings to s3 as csv
+    embed_file_name = "prod2vec_embed_weights_run_{}".format(run_id)
     embed_weights_prods.to_csv(
-        "s3://{}/{}.csv".format(bucket, "prod2vec_embed_weights"), index=False
+        "s3://{}/{}.csv".format(bucket, embed_file_name), index=False
     )

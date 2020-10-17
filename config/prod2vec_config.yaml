@@ -43,6 +43,7 @@ estimator_config:
 
   # Config for training and tuning estimator
   static_params:
+    run_id: '2'
     entry_point: "/home/ubuntu/prod2vec/pipeline/model_train/model_train.py"
     run_hyperparameter_opt: "yes"
     epochs: 100
@@ -67,4 +68,9 @@ estimator_config:
     max_learning_rate: 0.5
   inputs:
     train: "s3://instacart-kaggle-data"
+
+post_process_config:
+
+  # Config for post processing
+  model_artifact: "/home/ubuntu/prod2vec/model_artifact/"
 
