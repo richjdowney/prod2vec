@@ -7,7 +7,7 @@ sys.path.insert(1, "/home/ubuntu/prod2vec")
 from config.load_prod2vec_config import load_yaml, Config
 from config import constants
 from utils.logging_framework import log
-from pipeline.data_preprocessing import data_prep
+from pipeline.data_preprocessing import data_prep, data_quality_checks
 from pipeline.tuning_analysis import tuning_analysis
 from pipeline.post_processing import post_process
 
@@ -203,6 +203,13 @@ with DAG(**config["dag"]) as dag:
         python_callable=data_prep.run_data_preprocessing,
     )
 
+    data_quality_checks = PythonOperator(
+        task_id="run_data_quality_checks",
+        dag=dag,
+        provide_context=False,
+        python_callable=data_quality_checks.run_data_quality_checks,
+    )
+
     # Determine if hyper-parameter tuning should be run
     branching = BranchPythonOperator(
         task_id="branching",
@@ -266,7 +273,8 @@ with DAG(**config["dag"]) as dag:
     end = DummyOperator(task_id="finish", dag=dag)
 
 init.set_downstream(pre_process_data)
-pre_process_data.set_downstream(branching)
+pre_process_data.set_downstream(data_quality_checks)
+data_quality_checks.set_downstream(branching)
 branching.set_downstream(train_prod2vec)
 branching.set_downstream(tune_prod2vec)
 tune_prod2vec.set_downstream(tuning_analysis)

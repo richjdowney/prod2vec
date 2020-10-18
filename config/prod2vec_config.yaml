@@ -43,7 +43,7 @@ estimator_config:
 
   # Config for training and tuning estimator
   static_params:
-    run_id: '2'
+    run_id: '3'
     entry_point: "/home/ubuntu/prod2vec/pipeline/model_train/model_train.py"
     run_hyperparameter_opt: "yes"
     epochs: 100
