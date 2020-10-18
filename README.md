@@ -18,3 +18,17 @@ The infrastructure utilized to train the model is shown in the diagram below:
 ![](Img/prod2vec_infrastructure.PNG)
 
 PyCharm was utilized as the IDE and code was automatically deployed to an ec2 instance with Airflow installed with a Postgres RDS instance.  Data was stored in an s3 bucket, models were tuned and trained utilizing Amazon Sagemaker.
+
+### Airflow Orchestration
+
+As menitoned above, Airflow was utilized to orchestrate and automate the pipeline.  The diagram below shows the DAG and tasks:
+
+![](Img/prod2vec_airflow.PNG)
+
+**pre_process_data:**  Reads the orders data and pre-processes it into lists of target and context pairs for ingestion into the model (more details in the modelling section below)  
+**run_data_quality_checks:** Runs basic data quality checks on the pre-processed data prior to modelling e.g. missing value checks, data integrity checks  
+**branching:** Task determines whether to run the hyperparameter tuning - this can be skipped if hyperparameters are known to speed up training  
+**model_training:** Trains the model using provided hyperparameters
+**model_tuning:** Tunes the number of embeddings and learning rate with Bayesian hyperparameter tuning techniques  
+**tuning_analysis:** Obtains a csv with the best training jobs from the tuning and some plots of the tuning job showing the hyperparameter search  
+**post_processing:** Obtains the embedding layer from the model   
