@@ -32,3 +32,7 @@ As menitoned above, Airflow was utilized to orchestrate and automate the pipelin
 **model_tuning:** Tunes the number of embeddings and learning rate with Bayesian hyperparameter tuning techniques  
 **tuning_analysis:** Obtains a csv with the best training jobs from the tuning and some plots of the tuning job showing the hyperparameter search  
 **post_processing:** Obtains the embedding layer from the model   
+
+### prod2vec model details  
+
+WIP - coming soon
