@@ -12,3 +12,5 @@ https://www.kaggle.com/c/instacart-market-basket-analysis/data)
 Specifically, the 'orders.csv' and 'products.csv' data sets were used in this project.
 
 ### Infrastructure
+
+![](Img/prod2vec_infrastructure.PNG)
