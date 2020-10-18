@@ -13,4 +13,8 @@ Specifically, the 'orders.csv' and 'products.csv' data sets were used in this pr
 
 ### Infrastructure
 
+The infrastructure utilized to train the model is shown in the diagram below:
+
 ![](Img/prod2vec_infrastructure.PNG)
+
+PyCharm was utilized as the IDE and code was automatically deployed to an ec2 instance with Airflow installed with a Postgres RDS instance.  Data was stored in an s3 bucket, models were tuned and trained utilizing Amazon Sagemaker.
