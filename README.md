@@ -43,4 +43,12 @@ The model architecture is shown in the illustration below:
 
 The model takes as input a target and context item pair which is passed through an embedding layer.  The size of the embedding layer can be tuned, in the model run in this project it was tuned between 100 and 500 nodes. The dot product between the context and target embeddings is calculated and the resulting vector is passed to a single node sigmoid layer where the target / context paired as classified as being a genuine pair (the item was found within the context) or a negative sample (the item was not found within the context). 
 
-Target and context pairs are identified utilizing the Keras skipgrams method which utilizes negative sampling to identify examples that are not part of the context. The 'context' for prod2vec in this project is ideally any item that is found within the same basket as a target item.  To speed up the processing the items in the basket are randomly shuffled and a 'window' is utilized as the context.  In the run found in this project a window size of 5 was utilized.
+Target and context pairs are identified utilizing the Keras skipgrams method which utilizes negative sampling to identify examples that are not part of the context. 
+
+The diagram below aims to illustrate how skipgram is utilized in the context of this grocery example:    
+
+![](Img/target_context_basket_example.PNG)
+
+In the illustration, an order is shown that contains 6 items. The target / context pairs for the pasta sauce are shown in the right hand table where 'true' pairs are labeled as 1 as the item was found within the context of the basket.  The Tide Pods are labeled as 0, for this basket this would be a negative sample as the item was not found within the context of the basket.  
+
+The 'context' for prod2vec in this project is ideally any item that is found within the same basket as a target item.  To speed up the processing the items in the basket are randomly shuffled (since order does not matter in this example) and a 'window' is utilized as the context.  In the run found in this project a window size of 5 was utilized.  This enabled the model to train faster and improved the loss metrics as it enabled the model to be trained on a larger number of baskets.
