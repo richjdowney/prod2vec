@@ -35,4 +35,10 @@ As menitoned above, Airflow was utilized to orchestrate and automate the pipelin
 
 ### prod2vec model details  
 
-WIP - coming soon
+The model is based on a word2vec model developed with Keras explained in the following [blog](https://adventuresinmachinelearning.com/word2vec-keras-tutorial/).  
+
+The model architecture is shown in the illustration below:
+
+![](Img/model.PNG)
+
+The model takes as input a target and context item pair which is passed through an embedding layer.  The size of the embedding layer can be tuned, in the model run in this project it was tuned between 100 and 500 nodes. The dot product between the context and target embeddings is calculated and the resulting vector is passed to a single node sigmoid layer where the target / context paired as classified as being a genuine pair (the item was found within the context) or a negative sample (the item was not found within the context). 
