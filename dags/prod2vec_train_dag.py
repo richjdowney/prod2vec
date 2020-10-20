@@ -120,7 +120,7 @@ tf_train_estimator = TensorFlow(
 train_config = training_config(
     estimator=tf_train_estimator,
     inputs=config["estimator_config"]["inputs"],
-    job_name="hyperparameter-tuner-prod2vec-{}".format(
+    job_name="train-prod2vec-{}".format(
         config["estimator_config"]["static_params"]["run_id"]
     ),
 )

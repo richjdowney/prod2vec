@@ -235,21 +235,16 @@ if __name__ == "__main__":
 
                     valid_loss = metrics.log_loss(list(labels_list_valid), pred_prob)
                     print(
-                        "Fold {}, iteration {}, train_loss={}".format(
-                            fold + 1, cnt, train_loss
-                        )
-                    )
-                    print(
                         "Fold {}, iteration {}, valid_loss={}".format(
                             fold + 1, cnt, valid_loss
                         )
                     )
 
-                    loss_per_fold.append(valid_loss)
+                loss_per_fold.append(valid_loss)
 
-        sim_cb.run_sim()
         avg_valid_loss = np.mean(loss_per_fold)
         print("loss: {}".format(avg_valid_loss))
+        sim_cb.run_sim()
 
     else:
 
@@ -265,7 +260,7 @@ if __name__ == "__main__":
             arr_3[0, ] = labels_list[idx]
             train_loss = model.train_on_batch([arr_1, arr_2], arr_3)
 
-            if cnt % 100 == 0:  # Print loss and validation loss every 100 epochs
+            if cnt % 1000 == 0:  # Print loss and validation loss every 1000 epochs
 
                 pred_prob = []
 

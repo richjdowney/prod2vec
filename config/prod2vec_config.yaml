@@ -43,10 +43,10 @@ estimator_config:
 
   # Config for training and tuning estimator
   static_params:
-    run_id: '3'
+    run_id: '6'
     entry_point: "/home/ubuntu/prod2vec/pipeline/model_train/model_train.py"
-    run_hyperparameter_opt: "yes"
-    epochs: 100
+    run_hyperparameter_opt: "no"
+    epochs: 1000000
     num_folds: 5
     valid_size: 100
     valid_window: 1000
@@ -58,7 +58,7 @@ estimator_config:
     objective_type: "Minimize"
   train_hyperparameters:
     embeddings: 400
-    learning_rate: 0.1
+    learning_rate: 0.015
   tune_hyperparameters:
     max_jobs: 2
     max_parallel_jobs: 2
