@@ -1,7 +1,8 @@
 # Keras
-from keras.layers import Embedding, Input, Reshape, Dot, Dense
+from keras.layers import Embedding, Input, Reshape, Dot, Dense, dot
 from keras import Model
-from keras.optimizers import Adam
+from keras.optimizers import RMSprop
+from keras.models import Sequential
 
 # Other packages
 import numpy as np
@@ -72,7 +73,7 @@ def create_cv_folds(input_array: np.ndarray, num_folds: iter) -> iter:
     return folds_list
 
 
-def prod2vec_model(num_prods: int, embed_size: int) -> tuple:
+def prod2vec_model(num_prods, embed_size):
     """ Creates the prod2vec model by creating target and context embeddings, calculating the cosine similarity of
         the embeddings and passing to a sigmoid layer to predict the label (correct target and context pair)
 
@@ -87,40 +88,40 @@ def prod2vec_model(num_prods: int, embed_size: int) -> tuple:
         -------
         model : keras.Model
             prod2vec model
-        validation_model : keras.Model
+        validation_model : array
             Model utilized for validation - outputs the cosine similarity between the target and context
             embeddings
 
     """
 
-    # create some input variables
-    input_target = Input((1,))
-    input_context = Input((1,))
+    target_model = Sequential()
+    target_model.add(Embedding(num_prods, embed_size,
+                               embeddings_initializer="glorot_uniform",
+                               input_length=1))
+    target_model.add(Reshape((embed_size,)))
 
-    embedding = Embedding(num_prods, embed_size, input_length=1, name="embedding")
+    context_model = Sequential()
+    context_model.add(Embedding(num_prods, embed_size,
+                                embeddings_initializer="glorot_uniform",
+                                input_length=1))
+    context_model.add(Reshape((embed_size,)))
 
-    target = embedding(input_target)
-    target = Reshape((embed_size, 1))(target)
-    context = embedding(input_context)
-    context = Reshape((embed_size, 1))(context)
+    dot_product = dot([target_model.output, context_model.output], axes=1,
+                      normalize=False)
 
-    # cosine similarity between the target and context embeddings for validation
-    similarity = Dot(axes=1, normalize=True)([target, context])
+    similarity = dot([target_model.output, context_model.output], axes=1,
+                     normalize=False)
 
-    # cosine similarity between the target and context embeddings to pass to the Sigmoid layer
-    dot_product = Dot(axes=1, normalize=True)([target, context])
-    dot_product = Reshape((1,))(dot_product)
+    output = Dense(1, kernel_initializer="glorot_uniform",
+                   activation="sigmoid")(dot_product)
 
-    # sigmoid output layer
-    output = Dense(1, activation="sigmoid")(dot_product)
+    model = Model(inputs=[target_model.input, context_model.input],
+                  outputs=output)
 
-    # create the primary training model
-    train_model = Model(inputs=[input_target, input_context], outputs=output)
+    validation_model = Model(inputs=[target_model.input, context_model.input],
+                             outputs=similarity)
 
-    # validation model to run similarity checks during training
-    valid_model = Model(inputs=[input_target, input_context], outputs=similarity)
-
-    return train_model, valid_model
+    return model, validation_model
 
 
 if __name__ == "__main__":
@@ -197,8 +198,8 @@ if __name__ == "__main__":
     arr_2 = np.zeros((1,))
     arr_3 = np.zeros((1,))
 
-    # Use Adam optimizer
-    optim_adam = Adam(learning_rate=args.learning_rate)
+    # Use RMSProp
+    otpim_rmsprop = RMSprop(learning_rate=args.learning_rate)
 
     if args.cross_validate == "True":  # Sagemaker passes bool as string
 
@@ -211,7 +212,7 @@ if __name__ == "__main__":
         loss_per_fold = []  # array to hold loss for each fold
 
         for fold in range(0, args.num_folds):
-            model.compile(loss="binary_crossentropy", optimizer=optim_adam)
+            model.compile(loss="binary_crossentropy", optimizer=otpim_rmsprop)
             labels_list = next(labels_list_folds)
             prod_target = next(prod_target_folds)
             prod_context = next(prod_context_folds)
@@ -248,7 +249,7 @@ if __name__ == "__main__":
 
     else:
 
-        model.compile(loss="binary_crossentropy", optimizer=optim_adam)
+        model.compile(loss="binary_crossentropy", optimizer=otpim_rmsprop)
         labels_list = labels_list_train
         prod_target = prod_target_train
         prod_context = prod_context_train
@@ -260,7 +261,7 @@ if __name__ == "__main__":
             arr_3[0, ] = labels_list[idx]
             train_loss = model.train_on_batch([arr_1, arr_2], arr_3)
 
-            if cnt % 1000 == 0:  # Print loss and validation loss every 1000 epochs
+            if cnt % 10000 == 0:  # Print loss and validation loss every 1000 epochs
 
                 pred_prob = []
 

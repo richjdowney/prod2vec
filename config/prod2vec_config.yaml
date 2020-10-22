@@ -36,17 +36,17 @@ preprocess_constants:
   # Config for data pre-processing
   num_prods: 10000
   train_ratio: 0.8
-  train_window_size: 5
+  train_window_size: 20
 
 
 estimator_config:
 
   # Config for training and tuning estimator
   static_params:
-    run_id: '6'
+    run_id: '9'
     entry_point: "/home/ubuntu/prod2vec/pipeline/model_train/model_train.py"
-    run_hyperparameter_opt: "no"
-    epochs: 1000000
+    run_hyperparameter_opt: "yes"
+    epochs: 200000
     num_folds: 5
     valid_size: 100
     valid_window: 1000
@@ -60,11 +60,11 @@ estimator_config:
     embeddings: 400
     learning_rate: 0.015
   tune_hyperparameters:
-    max_jobs: 2
-    max_parallel_jobs: 2
+    max_jobs: 50
+    max_parallel_jobs: 5
     min_embeddings: 100
     max_embeddings: 500
-    min_learning_rate: 0.01
+    min_learning_rate: 0.0001
     max_learning_rate: 0.5
   inputs:
     train: "s3://instacart-kaggle-data"
