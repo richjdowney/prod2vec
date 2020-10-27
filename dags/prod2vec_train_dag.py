@@ -97,6 +97,7 @@ tf_train_estimator = TensorFlow(
     train_instance_type="ml.m4.xlarge",
     framework_version="2.0.0",
     py_version="py3",
+    max_run=172800,
     metric_definitions=config["estimator_config"]["static_params"][
         "metric_definitions"
     ],
@@ -244,7 +245,7 @@ with DAG(**config["dag"]) as dag:
         provide_context=False,
         python_callable=tuning_analysis.run_tuning_analysis,
         op_kwargs={
-            "job_name": "hyperparameter-tuner-prod2vec-{}".format(
+            "job_name": "train-prod2vec-{}".format(
                 config["estimator_config"]["static_params"]["run_id"]
             )
         },
@@ -259,7 +260,7 @@ with DAG(**config["dag"]) as dag:
         trigger_rule=TriggerRule.ONE_SUCCESS,
         op_kwargs={
             "hpo_enabled": hpo_enabled,
-            "job_name": "hyperparameter-tuner-prod2vec-{}".format(
+            "job_name": "train-prod2vec-{}".format(
                 config["estimator_config"]["static_params"]["run_id"]
             ),
             "bucket": config["s3"]["bucket"],

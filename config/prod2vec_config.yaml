@@ -34,7 +34,7 @@ s3:
 preprocess_constants:
 
   # Config for data pre-processing
-  num_prods: 10000
+  num_prods: 35000
   train_ratio: 0.8
   train_window_size: 20
 
@@ -43,10 +43,10 @@ estimator_config:
 
   # Config for training and tuning estimator
   static_params:
-    run_id: '9'
+    run_id: '14'
     entry_point: "/home/ubuntu/prod2vec/pipeline/model_train/model_train.py"
-    run_hyperparameter_opt: "yes"
-    epochs: 200000
+    run_hyperparameter_opt: "no"
+    epochs: 300000
     num_folds: 5
     valid_size: 100
     valid_window: 1000
@@ -57,8 +57,8 @@ estimator_config:
     objective_metric_name: "loss"
     objective_type: "Minimize"
   train_hyperparameters:
-    embeddings: 400
-    learning_rate: 0.015
+    embeddings: 1024
+    learning_rate: 0.001
   tune_hyperparameters:
     max_jobs: 50
     max_parallel_jobs: 5
