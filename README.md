@@ -52,3 +52,13 @@ The diagram below aims to illustrate how skipgram is utilized in the context of 
 In the illustration, an order is shown that contains 6 items. The target / context pairs for the pasta sauce are shown in the right hand table where 'true' pairs are labeled as 1 as the item was found within the context of the basket.  The Tide Pods are labeled as 0, for this basket this would be a negative sample as the item was not found within the context of the basket.  
 
 The 'context' for prod2vec in this project is ideally any item that is found within the same basket as a target item.  To speed up the processing the items in the basket are randomly shuffled (since order does not matter in this example) and a 'window' is utilized as the context.  In the run found in this project a window size of 5 was utilized.  This enabled the model to train faster and improved the loss metrics as it enabled the model to be trained on a larger number of baskets.
+
+### Example output
+
+Utilizing the product vectors it is possible to identify the 'most similar' items to a given item.  The example below shows the most similar items to peanut butter:  
+
+![](Img/peanut_butter.PNG)  
+
+In this example the most similar items are other staples (e.g. cereal, sparkling water, soda), complimentary items (e.g. whole wheat bread), other peanut butter flavored items e.g. peanut butter cereal.  
+
+
