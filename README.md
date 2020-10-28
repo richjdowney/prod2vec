@@ -71,6 +71,6 @@ The example below shows the most similar items to acai berry smoothie packs:
 
 ![](Img/smoothie_example.PNG)  
 
-In this example the most similar items are other breakfast items and juices (e.g. orange juice, pineapple juice, waffles, bacon, pancake mix), items with appeal to children (e.g. mac and cheese).  
+In this example the most similar items are other breakfast items and juices (e.g. orange juice, pineapple juice, waffles, bacon, pancake mix), items with appeal to children (e.g. mac and cheese), healthy snacks (e.g. rice cakes).  
 
 
