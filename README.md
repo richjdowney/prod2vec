@@ -73,4 +73,8 @@ The example below shows the most similar items to acai berry smoothie packs:
 
 In this example the most similar items are other breakfast items and juices (e.g. orange juice, pineapple juice, waffles, bacon, pancake mix), items with appeal to children (e.g. mac and cheese), healthy snacks (e.g. rice cakes).  
 
+### Recommended hyperparameters  
 
+To produce this output, the model was trained with embeddings of size 1024 with 300,000 epochs (item / context example pairs) and a learning rate of 0.01.  With these settings the 'similarity' examples were starting to become logical, the loss was significantly slowing although it was still dropping so the model would likely remain slightly underfitted and should be trained for longer.  Increasing the learning rate was causing the loss to increase over epochs.  
+
+The code has been set up to allow for hyperparameter tuning with Bayesian optimization if re-tuning the hyperparameters is desierd.  
