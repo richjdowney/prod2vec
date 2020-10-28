@@ -59,6 +59,18 @@ Utilizing the product vectors it is possible to identify the 'most similar' item
 
 ![](Img/peanut_butter.PNG)  
 
-In this example the most similar items are other staples (e.g. cereal, sparkling water, soda), complimentary items (e.g. whole wheat bread), other peanut butter flavored items e.g. peanut butter cereal.  
+In this example the most similar items are other staples (e.g. cereal, sparkling water, soda), complimentary items (e.g. whole wheat bread, bagels), other peanut butter flavored items e.g. peanut butter cereal.  
+
+The example below shows the most similar items to sea salt caramel gelato:
+
+![](Img/sea_salt_gelato.PNG)  
+
+In this example the most similar items are other caramel or sweet flavored desserts.  
+
+The example below shows the most similar items to acai berry smoothie packs:
+
+![](Img/smoothie_example.PNG)  
+
+In this example the most similar items are other breakfast items and juices (e.g. orange juice, pineapple juice, waffles, bacon, pancake mix), items with appeal to children (e.g. mac and cheese).  
 
 
