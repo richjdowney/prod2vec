@@ -106,14 +106,14 @@ tf_train_estimator = TensorFlow(
         "num_prods": config["preprocess_constants"]["num_prods"],
         "valid_size": config["estimator_config"]["static_params"]["valid_size"],
         "valid_window": config["estimator_config"]["static_params"]["valid_window"],
-        "num_folds": config["estimator_config"]["static_params"]["num_folds"],
-        "cross_validate": config["estimator_config"]["static_params"]["cross_validate"],
-        "num_embeddings": config["estimator_config"]["train_hyperparameters"][
+        "embedding_dim": config["estimator_config"]["train_hyperparameters"][
             "embeddings"
         ],
         "learning_rate": config["estimator_config"]["train_hyperparameters"][
             "learning_rate"
         ],
+        "batch_size": config["estimator_config"]["train_hyperparameters"]["batch_size"],
+        "num_sampled": config["preprocess_constants"]["num_ns"],
     },
 )
 
@@ -147,8 +147,8 @@ tf_tune_estimator = TensorFlow(
         "num_prods": config["preprocess_constants"]["num_prods"],
         "valid_size": config["estimator_config"]["static_params"]["valid_size"],
         "valid_window": config["estimator_config"]["static_params"]["valid_window"],
-        "num_folds": config["estimator_config"]["static_params"]["num_folds"],
-        "cross_validate": config["estimator_config"]["static_params"]["cross_validate"],
+        "batch_size": config["estimator_config"]["train_hyperparameters"]["batch_size"],
+        "num_sampled": config["preprocess_constants"]["num_ns"],
     },
 )
 

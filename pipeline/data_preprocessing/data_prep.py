@@ -1,10 +1,11 @@
 import sys
-sys.path.insert(1, '/home/ubuntu/prod2vec')
+
+sys.path.insert(1, "/home/ubuntu/prod2vec")
 
 import random
 import collections
 import numpy as np
-from keras.preprocessing import sequence
+import tensorflow as tf
 import pickle
 import pandas
 from utils.logging_framework import log
@@ -71,7 +72,7 @@ def create_data(prod_list: list, prod_group_list: list, num_prods: int) -> tuple
             dictionary containing the reverse mapping of index to product_id
 
 
-        """
+    """
 
     # Create counts of products
     count = [["UNK", -1]]  # Placeholder for unknown
@@ -104,101 +105,100 @@ def create_data(prod_list: list, prod_group_list: list, num_prods: int) -> tuple
     return all_basket_data, count, dictionary, reversed_dictionary
 
 
-def create_target_context(
-    basks: list,
+def generate_training_data(
+    sequences: list,
+    window_size: int,
+    num_ns: int,
     num_prods: int,
-    train_window_size: int,
-    max_bask_length: int,
-    num_samples=0,
+    seed: int,
+    max_basket_length: int,
 ) -> tuple:
-    """ Function to create tuples of target / context pairs with associated labels.  This function
-        utilizes the keras skipgrams function which generates positive and negative target / context pairs
-        utilizing negative sampling to obtain example negative targets
+    """ Function to create training data containing lists of target products, context products
+        and labels
 
         Parameters
         ----------
-        basks : list
-            list of baskets with each list containing the index of the product_id contained in the basket
-        num_samples : int
-            the number of baskets to sample (if samping is desired)
-        train_window_size : int
-            window size to select context. To speed up processing it may be beneficial to choose a smaller
-            context within the (randomly shuffled) items in the basket
-        max_bask_length : int
-            the maximum number of items to train from each basket - speeds up processing by capping
-            very large baskets that cause the skipgram function to be very slow
+        sequences : list
+            Lists of baskets and unique items purchased in each
+        window_size : int
+            Size of the window for selecting the context products - for this use case the window
+            size should be the length of the basket but to speed up training a smaller window
+            is recommended
+        num_ns : int
+            The number of negative samples to select per positive sample
         num_prods : int
-            the number of products on which to train the embeddings e.g. top X products
+            The number of unique products in the product dictionary (equivalent to the vocab size in NLP)
+        seed : int
+            The seed for the negative sampling
+        max_basket_length : int
+            The maximum number of items to consider in each basket, used to speed up training
 
         Returns
         -------
-        prod_target : array
-            array containing the product indices used for targets
-        prod_context : array
-            array containing the product indices used for context
-        couples_list : list
-            list containing the target / context pairs
-        labels_list : list
-            list containing the associated labels for the target / context pairs
+        targets : list
+            List of target products
+        contexts : list
+            List of context products (including negative samples)
+        labels : list
+            Binary 0/1 indicator if the target / context pair were a positive sample (1) or negative sample (0)
 
         """
 
-    sampling_table = sequence.make_sampling_table(num_prods)
+    # Elements of each training example are appended to these lists.
+    targets, contexts, labels = [], [], []
 
-    if num_samples > 0:
-        # Check if the number of samples requested is < the number of baskets
-        assert num_samples < len(
-            basks
-        ), "Number of samples {} requested is > the number of available baskets {}".format(
-            num_samples, len(basks)
+    # Build the sampling table for num_prods tokens.
+    sampling_table = tf.keras.preprocessing.sequence.make_sampling_table(num_prods)
+
+    # Iterate over all sequences (sentences) in dataset.
+    for sequence in sequences:
+
+        # shuffle the items in the basket
+        random.shuffle(sequence)
+
+        # cap the maximum basket length (number of items in basket)
+        sequence = sequence[0:max_basket_length]
+
+        # Generate positive skip-gram pairs for a sequence (sentence).
+        positive_skip_grams, _ = tf.keras.preprocessing.sequence.skipgrams(
+            sequence,
+            vocabulary_size=num_prods,
+            sampling_table=sampling_table,
+            window_size=window_size,
+            negative_samples=0,
         )
 
-        basks = random.sample(basks, num_samples)
-
-    couples_list = []
-    labels_list = []
-
-    # need to split the baskets into smaller chunks to run through the skipgrams method
-    # runs out of memory if trying to process all baskets together
-    chunks_of_basks = zip(*(iter(basks),) * 1000)  # maximum of 1000 baskets per group
-
-    for chunk in chunks_of_basks:
-
-        couples_list_chunk = []
-        labels_list_chunk = []
-
-        for basket in chunk:
-            # shuffle the items in the basket
-            random.shuffle(basket)
-
-            # cap the maximum basket length (number of items in basket)
-            basket = basket[0:max_bask_length]
-
-            couples, labels = sequence.skipgrams(
-                basket,
-                num_prods,
-                window_size=train_window_size,
-                sampling_table=sampling_table,
-                shuffle=True,
+        # Iterate over each positive skip-gram pair to produce training examples
+        # with positive context word and negative samples.
+        for target_prod, context_prod in positive_skip_grams:
+            context_class = tf.expand_dims(
+                tf.constant([context_prod], dtype="int64"), 1
             )
-            couples_list_chunk = [*couples_list_chunk, *couples]
-            labels_list_chunk = [*labels_list_chunk, *labels]
 
-    couples_list = couples_list + couples_list_chunk
-    labels_list = labels_list + labels_list_chunk
+            negative_sampling_candidates, _, _ = tf.random.log_uniform_candidate_sampler(
+                true_classes=context_class,
+                num_true=1,
+                num_sampled=num_ns,
+                unique=True,
+                range_max=num_prods,
+                seed=seed,
+                name="negative_sampling",
+            )
 
-    # Shuffle the final output so that consecutive pairs wont be from the same basket
-    seed = random.randint(0, 10e6)
-    random.seed(seed)
-    random.shuffle(couples_list)
-    random.seed(seed)
-    random.shuffle(labels_list)
+            # Build context and label vectors (for one target word)
+            negative_sampling_candidates = tf.expand_dims(
+                negative_sampling_candidates, 1
+            )
 
-    prod_target, prod_context = zip(*couples_list)
-    prod_target = np.array(prod_target, dtype="int32")
-    prod_context = np.array(prod_context, dtype="int32")
+            context = tf.concat([context_class, negative_sampling_candidates], 0)
+            label = tf.constant([1] + [0] * num_ns, dtype="int64")
 
-    return prod_target, prod_context, couples_list, labels_list
+            # Append each element from the training example to global lists.
+            targets.append(target_prod)
+            contexts.append(context)
+            labels.append(label)
+
+    return targets, contexts, labels
 
 
 def training_data_to_s3(obj: any, bucket: str, key: str):
@@ -232,33 +232,6 @@ def training_data_to_s3(obj: any, bucket: str, key: str):
     if isinstance(obj, np.ndarray):
         np.savetxt(key, obj, delimiter=",")
         s3c.upload_file(key, bucket, key)
-
-
-def create_train_validation(input_list: list, train_ratio: float) -> tuple:
-    """ Function to create training and validation sets from the target/context pairs lists.  NOTE:
-        lists should be shuffled before being input into the function to avoid order bias
-
-        Parameters
-        ----------
-        input_list : list
-            list of targets, context, target/context pairs or labels
-        train_ratio : float
-            percentage of observations to use for training
-
-        Returns
-        -------
-        train_list : list
-            the list to use for training
-        valid_list : list
-            the list to use for validation
-
-        """
-
-    train_size = int(len(input_list) * train_ratio)
-    train_list = input_list[0:train_size]
-    valid_list = input_list[train_size + 1 :]
-
-    return train_list, valid_list
 
 
 def run_data_preprocessing():
@@ -307,86 +280,35 @@ def run_data_preprocessing():
 
     # Create the lists required for model training, target and context pairs and labels
     log.info("Creating target and context pairs using Keras Skipgrams")
-    prod_target, prod_context, couples_list, labels_list = create_target_context(
-        basks=all_basket_data,
+    targets, contexts, labels = generate_training_data(
+        sequences=all_basket_data,
+        window_size=config["preprocess_constants"]["train_window_size"],
+        num_ns=config["preprocess_constants"]["num_ns"],
         num_prods=config["preprocess_constants"]["num_prods"],
-        train_window_size=config["preprocess_constants"]["train_window_size"],
-        max_bask_length=50,
-        num_samples=0,
+        seed=1,
+        max_basket_length=config["preprocess_constants"]["max_basket_length"],
     )
 
-    log.info(couples_list[:10], labels_list[:10])
+    log.info("Uploading training data and dictionary mappings to s3")
+    # Upload the training data and the dictionary mappings to S3
+    training_data_to_s3(obj=targets, bucket=config["s3"]["bucket"], key="targets.txt")
 
-    # Split data into training and validation sets
-    log.info("Splitting data into training and validation sets")
-    train_ratio = config["preprocess_constants"]["train_ratio"]
-    prod_target_train, prod_target_valid = create_train_validation(prod_target, train_ratio)
-    prod_context_train, prod_context_valid = create_train_validation(
-        prod_context, train_ratio
-    )
-    couples_list_train, couples_list_valid = create_train_validation(
-        couples_list, train_ratio
-    )
-    labels_list_train, labels_list_valid = create_train_validation(labels_list, train_ratio)
-
-    log.info("Uploading training and validation data and dictionary mappings to s3")
-    # Upload the training and validation data and the dictionary mappings to S3
+    # Upload context to s3
     training_data_to_s3(
-        obj=couples_list_train,
-        bucket=config["s3"]["bucket"],
-        key=config["s3"]["couples_list_train_key"],
+        obj=contexts, bucket=config["s3"]["bucket"], key="contexts.txt"
     )
 
-    training_data_to_s3(
-        obj=couples_list_valid,
-        bucket=config["s3"]["bucket"],
-        key=config["s3"]["couples_list_valid_key"],
-    )
+    # Upload labels to s3
+    training_data_to_s3(obj=labels, bucket=config["s3"]["bucket"], key="labels.txt")
 
-    training_data_to_s3(
-        obj=labels_list_train,
-        bucket=config["s3"]["bucket"],
-        key=config["s3"]["labels_list_train_key"],
-    )
-
-    training_data_to_s3(
-        obj=labels_list_valid,
-        bucket=config["s3"]["bucket"],
-        key=config["s3"]["labels_list_valid_key"],
-    )
-
-    training_data_to_s3(
-        obj=prod_target_train,
-        bucket=config["s3"]["bucket"],
-        key=config["s3"]["prod_target_train_key"],
-    )
-
-    training_data_to_s3(
-        obj=prod_target_valid,
-        bucket=config["s3"]["bucket"],
-        key=config["s3"]["prod_target_valid_key"],
-    )
-
-    training_data_to_s3(
-        obj=prod_context_train,
-        bucket=config["s3"]["bucket"],
-        key=config["s3"]["prod_context_train_key"],
-    )
-
-    training_data_to_s3(
-        obj=prod_context_valid,
-        bucket=config["s3"]["bucket"],
-        key=config["s3"]["prod_context_valid_key"],
-    )
-
+    # Upload the product index to product ID dictionary to s3
     training_data_to_s3(
         obj=reversed_dictionary,
         bucket=config["s3"]["bucket"],
-        key=config["s3"]["reversed_dict_key"],
+        key="reversed_dictionary.pkl",
     )
 
+    # Upload the product ID to product description dictionary to s3
     training_data_to_s3(
-        obj=products_dict,
-        bucket=config["s3"]["bucket"],
-        key=config["s3"]["products_dict_key"],
+        obj=products_dict, bucket=config["s3"]["bucket"], key="products_dict.pkl"
     )

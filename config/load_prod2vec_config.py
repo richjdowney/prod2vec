@@ -34,18 +34,6 @@ class ConfigS3(pydantic.BaseModel):
     """Configuration for the s3 buckets and keys"""
 
     bucket: str
-    orders_key: str
-    products_key: str
-    couples_list_train_key: str
-    couples_list_valid_key: str
-    labels_list_train_key: str
-    labels_list_valid_key: str
-    prod_target_train_key: str
-    prod_target_valid_key: str
-    prod_context_train_key: str
-    prod_context_valid_key: str
-    reversed_dict_key: str
-    products_dict_key: str
 
 
 class ConfigPreprocess(pydantic.BaseModel):
@@ -53,6 +41,8 @@ class ConfigPreprocess(pydantic.BaseModel):
 
     num_prods: int
     train_ratio: float
+    num_ns: int
+    max_basket_length: int
 
 
 class ConfigStaticParams(pydantic.BaseModel):

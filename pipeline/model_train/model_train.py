@@ -1,17 +1,14 @@
-# Keras
-from keras.layers import Embedding, Input, Reshape, Dot, Dense, dot
-from keras import Model
-from keras.optimizers import RMSprop
-from keras.models import Sequential
-
-# Other packages
-import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.layers import Embedding, Dot, Flatten
+from tensorflow.keras import Model
+from tensorflow.keras.optimizers import Adam, RMSprop
+from sklearn.metrics.pairwise import cosine_similarity
 import argparse
 import os
 import pickle
-
-# Sklearn
-from sklearn import metrics
+import numpy as np
+import pandas as pd
 
 
 class SimilarityCallback:
@@ -21,149 +18,63 @@ class SimilarityCallback:
         valid_examples = np.random.choice(
             args.valid_window, args.valid_size, replace=False
         )
-        for prod in range(args.valid_size):
-            valid_prod = reversed_dictionary[valid_examples[prod]]
-            valid_prod = products_dict.get(valid_prod)
-            top_k = 10  # number of nearest neighbors
-            sim = self._get_sim(valid_examples[prod])
-            nearest = (-sim).argsort()[1: top_k + 1]
-            log_str = "Nearest to %s:" % valid_prod
-            for k in range(top_k):
-                close_prod = reversed_dictionary[nearest[k]]
-                close_prod = products_dict.get(close_prod)
-                log_str = "%s %s," % (log_str, close_prod)
-            print(log_str)
+        embed_weights = prod2vec.get_layer("p2v_embedding").get_weights()[0]
 
-    @staticmethod
-    def _get_sim(valid_prod_idx):
-        sim = np.zeros((args.num_prods,))
-        in_arr1 = np.zeros((1, ))
-        in_arr2 = np.zeros((1, ))
-        for prod in range(args.num_prods):
-            in_arr1[0, ] = valid_prod_idx
-            in_arr2[0, ] = prod
-            out = validation_model.predict_on_batch([in_arr1, in_arr2])
-            sim[prod] = out
-        return sim
+        for i in range(args.valid_size):
+            # Get the product to validate and obtain its embedding
+            valid_prod = reversed_dictionary[valid_examples[i]]
+            valid_embed = embed_weights[valid_examples[i]].reshape(1, -1)
 
+            # Calculate cosine similarity between the validation product and all other prods
+            cosine_sim = cosine_similarity(
+                embed_weights, Y=valid_embed, dense_output=True
+            )
+            cosine_sim_pd = pd.DataFrame(cosine_sim)
+            cosine_sim_pd.columns = ["cosine_sim"]
 
-sim_cb = SimilarityCallback()
+            # Get the products that are most similar to the validation product
+            cosine_sim_pd.loc[:, "index"] = cosine_sim_pd.index
+            cosine_sim_pd.sort_values("cosine_sim", ascending=False, inplace=True)
+            cosine_sim_pd = cosine_sim_pd[cosine_sim_pd["index"] != valid_examples[i]]
+            cosine_sim_pd.loc[:, "valid_prod"] = cosine_sim_pd["index"].map(
+                reversed_dictionary
+            )
+            cosine_sim_pd.loc[:, "prod_desc"] = cosine_sim_pd["valid_prod"].map(
+                products_dict
+            )
 
-
-def create_cv_folds(input_array: np.ndarray, num_folds: iter) -> iter:
-    """ Takes input lists and creates an iter object with the folds
-
-        Parameters
-        ----------
-        input_array : ndarray
-            list of targets, context, target/context pairs or labels
-        num_folds : int
-            the number of desired folds for cross validation
-
-        Returns
-        -------
-        folds_list : iter
-            an iterator containing the folds for each input
-
-        """
-
-    num_per_fold = int(np.floor(len(input_array) / num_folds))
-    folds_list = zip(*(iter(input_array),) * num_per_fold)
-
-    return folds_list
-
-
-def prod2vec_model(num_prods, embed_size):
-    """ Creates the prod2vec model by creating target and context embeddings, calculating the cosine similarity of
-        the embeddings and passing to a sigmoid layer to predict the label (correct target and context pair)
-
-        Parameters
-        ----------
-        num_prods : int
-            the number of products on which to train the embeddings e.g. top X products
-        embed_size : int
-            the size of the target and context embeddings
-
-        Returns
-        -------
-        model : keras.Model
-            prod2vec model
-        validation_model : array
-            Model utilized for validation - outputs the cosine similarity between the target and context
-            embeddings
-
-    """
-
-    target_model = Sequential()
-    target_model.add(Embedding(num_prods, embed_size,
-                               embeddings_initializer="glorot_uniform",
-                               input_length=1))
-    target_model.add(Reshape((embed_size,)))
-
-    context_model = Sequential()
-    context_model.add(Embedding(num_prods, embed_size,
-                                embeddings_initializer="glorot_uniform",
-                                input_length=1))
-    context_model.add(Reshape((embed_size,)))
-
-    dot_product = dot([target_model.output, context_model.output], axes=1,
-                      normalize=False)
-
-    similarity = dot([target_model.output, context_model.output], axes=1,
-                     normalize=False)
-
-    output = Dense(1, kernel_initializer="glorot_uniform",
-                   activation="sigmoid")(dot_product)
-
-    model = Model(inputs=[target_model.input, context_model.input],
-                  outputs=output)
-
-    validation_model = Model(inputs=[target_model.input, context_model.input],
-                             outputs=similarity)
-
-    return model, validation_model
+            # Write out the product descriptions
+            valid_desc = products_dict.get(valid_prod)
+            nearest_desc = cosine_sim_pd["prod_desc"][:20].str.cat(sep="; ")
+            print("Nearest to {}: {}".format(valid_desc, nearest_desc))
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--num_prods", type=int)
     parser.add_argument("--epochs", type=int)
-    parser.add_argument("--num_embeddings", type=int)
+    parser.add_argument("--embedding_dim", type=int)
     parser.add_argument("--model_dir", type=str)
     parser.add_argument("--learning_rate", type=float)
     parser.add_argument("--train", type=str, default=os.environ.get("SM_CHANNEL_TRAIN"))
     parser.add_argument("--valid_size", type=int)
     parser.add_argument("--valid_window", type=int)
-    parser.add_argument("--num_folds", type=int, default=10)
-    parser.add_argument(
-        "--cross_validate", type=str, default="True"
-    )  # Sagemaker is passing the boolean as a string
+    parser.add_argument("--batch_size", type=int)
+    parser.add_argument("--num_sampled", type=int)
 
     args = parser.parse_args()
     print("Received arguments {}".format(args))
 
     # Loading the list pickles
-    with open(
-        os.path.join(args.train, "couples_list_train.txt"), "rb"
-    ) as fp:  # Unpickling
-        couples_list_train = pickle.load(fp)
+    with open(os.path.join(args.train, "targets.txt"), "rb") as fp:  # Unpickling
+        targets = pickle.load(fp)
 
-    with open(
-        os.path.join(args.train, "couples_list_valid.txt"), "rb"
-    ) as fp:  # Unpickling
-        couples_list_valid = pickle.load(fp)
+    with open(os.path.join(args.train, "contexts.txt"), "rb") as fp:  # Unpickling
+        contexts = pickle.load(fp)
 
-    with open(
-        os.path.join(args.train, "labels_list_train.txt"), "rb"
-    ) as fp:  # Unpickling
-        labels_list_train = pickle.load(fp)
-
-    with open(
-        os.path.join(args.train, "labels_list_valid.txt"), "rb"
-    ) as fp:  # Unpickling
-        labels_list_valid = pickle.load(fp)
+    with open(os.path.join(args.train, "labels.txt"), "rb") as fp:  # Unpickling
+        labels = pickle.load(fp)
 
     # Loading the integer to product_id dictionary
     with open(
@@ -175,117 +86,46 @@ if __name__ == "__main__":
     with open(os.path.join(args.train, "products_dict.pkl"), "rb") as fp:  # Unpickling
         products_dict = pickle.load(fp)
 
-    # Loading the arrays
-    prod_target_train = np.loadtxt(
-        os.path.join(args.train, "prod_target_train.csv"), delimiter=","
+    BATCH_SIZE = args.batch_size
+    BUFFER_SIZE = 10000
+    dataset = tf.data.Dataset.from_tensor_slices(((targets, contexts), labels))
+    dataset = dataset.shuffle(BUFFER_SIZE).batch(BATCH_SIZE, drop_remainder=True)
+
+    AUTOTUNE = tf.data.experimental.AUTOTUNE
+    dataset = dataset.cache().prefetch(buffer_size=AUTOTUNE)
+
+    class Prod2Vec(Model):
+        """Create the prod2vec model """
+
+        def __init__(self, num_prods, embedding_dim):
+            super(Prod2Vec, self).__init__()
+            self.target_embedding = Embedding(
+                num_prods, embedding_dim, input_length=1, name="p2v_embedding"
+            )
+
+            self.context_embedding = Embedding(
+                num_prods, embedding_dim, input_length=args.num_sampled + 1
+            )
+            self.dots = Dot(axes=(3, 2))
+            self.flatten = Flatten()
+
+        def call(self, pair):
+            target, context = pair
+            we = self.target_embedding(target)
+            ce = self.context_embedding(context)
+            dots = self.dots([ce, we])
+            return self.flatten(dots)
+
+    prod2vec = Prod2Vec(args.num_prods, args.embedding_dim)
+    otptim_rmsprop = RMSprop(learning_rate=args.learning_rate)
+    prod2vec.compile(
+        optimizer=otptim_rmsprop,
+        loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),
     )
-    prod_target_valid = np.loadtxt(
-        os.path.join(args.train, "prod_target_valid.csv"), delimiter=","
-    )
 
-    prod_context_train = np.loadtxt(
-        os.path.join(args.train, "prod_context_train.csv"), delimiter=","
-    )
-    prod_context_valid = np.loadtxt(
-        os.path.join(args.train, "prod_context_valid.csv"), delimiter=","
-    )
+    prod2vec.fit(dataset, epochs=args.epochs)
 
-    model, validation_model = prod2vec_model(
-        num_prods=args.num_prods, embed_size=args.num_embeddings
-    )
+    sim_cb = SimilarityCallback()
+    sim_cb.run_sim()
 
-    arr_1 = np.zeros((1,))
-    arr_2 = np.zeros((1,))
-    arr_3 = np.zeros((1,))
-
-    # Use RMSProp
-    otpim_rmsprop = RMSprop(learning_rate=args.learning_rate)
-
-    if args.cross_validate == "True":  # Sagemaker passes bool as string
-
-        # Create the cross-validation folds from the training data
-        prod_target_folds = create_cv_folds(prod_target_train, args.num_folds)
-        prod_context_folds = create_cv_folds(prod_context_train, args.num_folds)
-        couples_list_folds = create_cv_folds(couples_list_train, args.num_folds)
-        labels_list_folds = create_cv_folds(labels_list_train, args.num_folds)
-
-        loss_per_fold = []  # array to hold loss for each fold
-
-        for fold in range(0, args.num_folds):
-            model.compile(loss="binary_crossentropy", optimizer=otpim_rmsprop)
-            labels_list = next(labels_list_folds)
-            prod_target = next(prod_target_folds)
-            prod_context = next(prod_context_folds)
-
-            for cnt in range(args.epochs):
-                idx = np.random.randint(0, len(labels_list) - 1)
-                arr_1[0, ] = prod_target[idx]
-                arr_2[0, ] = prod_context[idx]
-                arr_3[0, ] = labels_list[idx]
-                train_loss = model.train_on_batch([arr_1, arr_2], arr_3)
-
-                if cnt % 100 == 0:  # Print loss and validation loss every 100 epochs
-
-                    pred_prob = []
-
-                    for i in range(0, len(prod_target_valid)):
-                        arr_1[0, ] = prod_target_valid[i]
-                        arr_2[0, ] = prod_context_valid[i]
-                        pred = model.predict([arr_1, arr_2])
-                        pred_prob.append(float(pred[0]))
-
-                    valid_loss = metrics.log_loss(list(labels_list_valid), pred_prob)
-                    print(
-                        "Fold {}, iteration {}, valid_loss={}".format(
-                            fold + 1, cnt, valid_loss
-                        )
-                    )
-
-                loss_per_fold.append(valid_loss)
-
-        avg_valid_loss = np.mean(loss_per_fold)
-        print("loss: {}".format(avg_valid_loss))
-        sim_cb.run_sim()
-
-    else:
-
-        model.compile(loss="binary_crossentropy", optimizer=otpim_rmsprop)
-        labels_list = labels_list_train
-        prod_target = prod_target_train
-        prod_context = prod_context_train
-
-        for cnt in range(args.epochs):
-            idx = np.random.randint(0, len(labels_list) - 1)
-            arr_1[0, ] = prod_target[idx]
-            arr_2[0, ] = prod_context[idx]
-            arr_3[0, ] = labels_list[idx]
-            train_loss = model.train_on_batch([arr_1, arr_2], arr_3)
-
-            if cnt % 10000 == 0:  # Print loss and validation loss every 1000 epochs
-
-                pred_prob = []
-
-                for i in range(0, len(prod_target_valid)):
-                    arr_1[0, ] = prod_target_valid[i]
-                    arr_2[0, ] = prod_context_valid[i]
-                    pred = model.predict([arr_1, arr_2])
-                    pred_prob.append(float(pred[0]))
-
-                valid_loss = metrics.log_loss(list(labels_list_valid), pred_prob)
-                print("iteration {}, valid_loss={}".format(cnt, valid_loss))
-
-        sim_cb.run_sim()
-
-        # Get the final validation loss
-        pred_prob = []
-
-        for i in range(0, len(prod_target_valid)):
-            arr_1[0, ] = prod_target_valid[i]
-            arr_2[0, ] = prod_context_valid[i]
-            pred = model.predict([arr_1, arr_2])
-            pred_prob.append(float(pred[0]))
-
-        valid_loss = metrics.log_loss(list(labels_list_valid), pred_prob)
-        print("loss: {}".format(valid_loss))
-
-        model.save(os.path.join("/opt/ml/model/", "prod2vec_model"))
+    prod2vec.save(os.path.join("/opt/ml/model/", "prod2vec_model"))
