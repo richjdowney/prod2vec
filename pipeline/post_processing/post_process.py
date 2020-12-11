@@ -89,7 +89,7 @@ def save_embeddings(
     model = tf.keras.models.load_model("{}/prod2vec_model".format(model_save_loc))
 
     # Get the embedding weights
-    embed_weights = pd.DataFrame(model.get_layer("p2v_embedding").get_weights()[0])
+    embed_weights = pd.DataFrame(model.get_weights()[0])
 
     # Map embedding to product_id and description
     embed_weights.loc[:, "index"] = embed_weights.index

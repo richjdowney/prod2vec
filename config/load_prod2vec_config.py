@@ -40,7 +40,6 @@ class ConfigPreprocess(pydantic.BaseModel):
     """Configuration for the data pre-processing constants"""
 
     num_prods: int
-    train_ratio: float
     num_ns: int
     max_basket_length: int
 
@@ -50,10 +49,8 @@ class ConfigStaticParams(pydantic.BaseModel):
     run_id: str
     run_hyperparameter_opt: str
     epochs: int
-    num_folds: int
     valid_size: int
     valid_window: int
-    cross_validate: bool
     metric_definitions: list
     objective_metric_name: str
     objective_type: str

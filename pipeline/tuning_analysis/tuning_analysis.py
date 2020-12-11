@@ -60,7 +60,7 @@ def run_tuning_analysis(job_name: str):
     log.info("Creating tuning analysis plots for tuning job {}".format(job_name))
     plot_hyperparams_over_search(
         df=tuning_analysis,
-        hyperparams=["num_embeddings", "learning_rate"],
+        hyperparams=["embedding_dim", "learning_rate"],
         bucket=config["s3"]["bucket"],
         key="params_over_search.png",
     )
@@ -68,7 +68,7 @@ def run_tuning_analysis(job_name: str):
     # Create a kde plot of hyper-parameters used over the tuning window
     plot_search_dist(
         df=tuning_analysis,
-        hyperparams=["num_embeddings", "learning_rate"],
+        hyperparams=["embedding_dim", "learning_rate"],
         bucket=config["s3"]["bucket"],
         key="search_kde.png",
     )

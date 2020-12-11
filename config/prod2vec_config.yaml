@@ -23,7 +23,7 @@ preprocess_constants:
 
   # Config for data pre-processing
   num_prods: 35000
-  train_window_size: 20
+  train_window_size: 4
   num_ns: 4
   max_basket_length: 50
 
@@ -31,10 +31,10 @@ estimator_config:
 
   # Config for training and tuning estimator
   static_params:
-    run_id: '14'
+    run_id: '26'
     entry_point: "/home/ubuntu/prod2vec/pipeline/model_train/model_train.py"
     run_hyperparameter_opt: "no"
-    epochs: 300000
+    epochs: 15
     valid_size: 100
     valid_window: 1000
     batch_size: 128
@@ -47,10 +47,10 @@ estimator_config:
     embeddings: 1024
     learning_rate: 0.001
   tune_hyperparameters:
-    max_jobs: 50
+    max_jobs: 5
     max_parallel_jobs: 5
     min_embeddings: 100
-    max_embeddings: 500
+    max_embeddings: 1024
     min_learning_rate: 0.0001
     max_learning_rate: 0.001
   inputs:

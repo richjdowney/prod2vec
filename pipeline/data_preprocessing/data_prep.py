@@ -243,11 +243,12 @@ def run_data_preprocessing():
     # Read the orders and products data from s3
     log.info("Reading orders and products data from s3")
     orders_data = read_csv_from_s3(
-        bucket=config["s3"]["bucket"], key=config["s3"]["orders_key"]
+        bucket=config["s3"]["bucket"], key="order_products__train.csv"
+
     )
 
     products = read_csv_from_s3(
-        bucket=config["s3"]["bucket"], key=config["s3"]["products_key"]
+        bucket=config["s3"]["bucket"], key="products.csv"
     )
 
     log.info(
@@ -277,6 +278,9 @@ def run_data_preprocessing():
         product_id_group_list,
         num_prods=config["preprocess_constants"]["num_prods"],
     )
+
+    # Sample
+    # all_basket_data = all_basket_data[0:1000]
 
     # Create the lists required for model training, target and context pairs and labels
     log.info("Creating target and context pairs using Keras Skipgrams")
