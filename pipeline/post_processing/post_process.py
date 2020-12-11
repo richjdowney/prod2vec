@@ -2,8 +2,7 @@ import sys
 
 sys.path.insert(1, "/home/ubuntu/prod2vec")
 
-import keras
-from keras.models import load_model
+import tensorflow as tf
 import pickle
 import tarfile
 import os
@@ -12,64 +11,8 @@ from utils.util_functions import *
 from utils.logging_framework import log
 
 
-def map_weights_to_prods(
-    df: pd.DataFrame, prod_lookup: pd.DataFrame, index_to_id_dict: dict
-) -> pd.DataFrame:
-    """ Function to append product details to the embeddings
-
-        Parameters
-        ----------
-        df : pandas.DataFrame
-            Pandas DataFrame containing the product embeddings
-        prod_lookup : pandas.DataFrame
-            Pandas DataFrame containing product details
-        index_to_id_dict : dict
-            Dictionary containing the index used to train the model and the product ID
-
-        Returns
-        -------
-        df : pandas.DataFrame
-            Embeddings with the product details appended
-
-    """
-
-    df["prod_index"] = df.index
-    df["product_id"] = df["prod_index"].map(index_to_id_dict)
-    df = df.merge(prod_lookup, on=["product_id"], how="left")
-
-    return df
-
-
-def get_model_weights(model: keras.engine.training.Model, layer: int) -> pd.DataFrame:
-    """ Function to get model weights from trained model and return them as a Pandas DataFrame
-
-        Parameters
-        ----------
-        model : keras.engine.training.Model
-            trained model
-        layer : int
-            layer to extract weights from
-
-        Returns
-        -------
-        embed_weights_pd : pandas.DataFrame
-            DataFrame containing the weights from the specified layer
-
-    """
-
-    embed_weights = model.layers[layer].get_weights()
-    embed_weights_pd = pd.DataFrame(embed_weights[0])
-
-    return embed_weights_pd
-
-
 def save_embeddings(
-    hpo_enabled: bool,
-    job_name: str,
-    bucket: str,
-    products_key: str,
-    run_id: str,
-    model_save_loc: str,
+    hpo_enabled: bool, job_name: str, bucket: str, run_id: str, model_save_loc: str
 ):
     """ Function to save the embedding weights to s3
 
@@ -81,8 +24,6 @@ def save_embeddings(
             Name of the hyper-parameter tuning job or training job
         bucket: str
             Name of the s3 bucket with the product descriptions and dictionaries
-        products_key : str
-            Name of the csv file with the product ID to product description lookup
         run_id : str
             Identifier for the run
         model_save_loc : str
@@ -104,8 +45,12 @@ def save_embeddings(
     with open("reversed_dictionary.pkl", "rb") as data:
         reversed_dictionary = pickle.load(data)
 
-    # Read the product ID to product description data
-    products = read_csv_from_s3(bucket=bucket, key=products_key)
+    # Loading the product ID to product description dictionary
+    with open("products_dict.pkl", "wb") as data:
+        s3.Bucket(bucket).download_fileobj("products_dict.pkl", data)
+
+    with open("products_dict.pkl", "rb") as data:
+        products_dict = pickle.load(data)
 
     # ======== Download and extract the model assets =========
 
@@ -137,22 +82,22 @@ def save_embeddings(
 
     log.info("Extracting and saving the embeddings")
 
-    with tarfile.open("{}/model.tar.gz".format(model_save_loc)) as tar:
-        tar.extractall(path="{}/".format(model_save_loc))
+    with tarfile.open("./model.tar.gz") as tar:
+        tar.extractall(path="./")
 
     # Load the model
-    model = load_model("{}/prod2vec_model".format(model_save_loc))
+    model = tf.keras.models.load_model("{}/prod2vec_model".format(model_save_loc))
 
     # Get the embedding weights
-    embed_weights = get_model_weights(model, 2)
+    embed_weights = pd.DataFrame(model.get_weights()[0])
 
     # Map embedding to product_id and description
-    embed_weights_prods = map_weights_to_prods(
-        embed_weights, products, reversed_dictionary
+    embed_weights.loc[:, "index"] = embed_weights.index
+    embed_weights.loc[:, "product_id"] = embed_weights["index"].map(reversed_dictionary)
+    embed_weights.loc[:, "product_name"] = embed_weights["product_id"].map(
+        products_dict
     )
 
     # Upload embeddings to s3 as csv
     embed_file_name = "prod2vec_embed_weights_run_{}".format(run_id)
-    embed_weights_prods.to_csv(
-        "s3://{}/{}.csv".format(bucket, embed_file_name), index=False
-    )
+    embed_weights.to_csv("s3://{}/{}.csv".format(bucket, embed_file_name), index=False)

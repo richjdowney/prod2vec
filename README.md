@@ -21,7 +21,7 @@ PyCharm was utilized as the IDE and code was automatically deployed to an ec2 in
 
 ### Airflow Orchestration
 
-As menitoned above, Airflow was utilized to orchestrate and automate the pipeline.  The diagram below shows the DAG and tasks:
+As mentioned above, Airflow was utilized to orchestrate and automate the pipeline.  The diagram below shows the DAG and tasks:
 
 ![](Img/prod2vec_airflow.PNG)
 
@@ -35,7 +35,7 @@ As menitoned above, Airflow was utilized to orchestrate and automate the pipelin
 
 ### prod2vec model details  
 
-The model is based on a word2vec model developed with Keras explained in the following [blog](https://adventuresinmachinelearning.com/word2vec-keras-tutorial/).  
+The model is based on a word2vec model developed with Tensorflow explained in the following [tutorial](https://www.tensorflow.org/tutorials/text/word2vec).  
 
 The model architecture is shown in the illustration below:
 

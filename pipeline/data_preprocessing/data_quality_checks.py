@@ -141,11 +141,11 @@ def run_data_quality_checks():
     # Read the orders and products data from s3
     log.info("Reading orders and products data from s3")
     orders_data = read_csv_from_s3(
-        bucket=config["s3"]["bucket"], key=config["s3"]["orders_key"]
+        bucket=config["s3"]["bucket"], key="order_products__train.csv"
     )
 
     products = read_csv_from_s3(
-        bucket=config["s3"]["bucket"], key=config["s3"]["products_key"]
+        bucket=config["s3"]["bucket"], key="products.csv"
     )
 
     log.info("Checking orders and products data for missing values on key columns")

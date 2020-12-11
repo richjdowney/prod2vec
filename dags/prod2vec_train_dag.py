@@ -106,14 +106,14 @@ tf_train_estimator = TensorFlow(
         "num_prods": config["preprocess_constants"]["num_prods"],
         "valid_size": config["estimator_config"]["static_params"]["valid_size"],
         "valid_window": config["estimator_config"]["static_params"]["valid_window"],
-        "num_folds": config["estimator_config"]["static_params"]["num_folds"],
-        "cross_validate": config["estimator_config"]["static_params"]["cross_validate"],
-        "num_embeddings": config["estimator_config"]["train_hyperparameters"][
+        "embedding_dim": config["estimator_config"]["train_hyperparameters"][
             "embeddings"
         ],
         "learning_rate": config["estimator_config"]["train_hyperparameters"][
             "learning_rate"
         ],
+        "batch_size": config["estimator_config"]["static_params"]["batch_size"],
+        "num_sampled": config["preprocess_constants"]["num_ns"],
     },
 )
 
@@ -147,8 +147,8 @@ tf_tune_estimator = TensorFlow(
         "num_prods": config["preprocess_constants"]["num_prods"],
         "valid_size": config["estimator_config"]["static_params"]["valid_size"],
         "valid_window": config["estimator_config"]["static_params"]["valid_window"],
-        "num_folds": config["estimator_config"]["static_params"]["num_folds"],
-        "cross_validate": config["estimator_config"]["static_params"]["cross_validate"],
+        "batch_size": config["estimator_config"]["static_params"]["batch_size"],
+        "num_sampled": config["preprocess_constants"]["num_ns"],
     },
 )
 
@@ -167,7 +167,7 @@ prod2vec_tuner = HyperparameterTuner(
         "max_parallel_jobs"
     ],
     hyperparameter_ranges={
-        "num_embeddings": IntegerParameter(
+        "embedding_dim": IntegerParameter(
             config["estimator_config"]["tune_hyperparameters"]["min_embeddings"],
             config["estimator_config"]["tune_hyperparameters"]["max_embeddings"],
         ),
@@ -182,7 +182,7 @@ prod2vec_tuner = HyperparameterTuner(
 tune_config = tuning_config(
     tuner=prod2vec_tuner,
     inputs=config["estimator_config"]["inputs"],
-    job_name="hyperparameter-tuner-prod2vec-{}".format(
+    job_name="train-prod2vec-{}".format(
         config["estimator_config"]["static_params"]["run_id"]
     ),
 )
@@ -264,7 +264,6 @@ with DAG(**config["dag"]) as dag:
                 config["estimator_config"]["static_params"]["run_id"]
             ),
             "bucket": config["s3"]["bucket"],
-            "products_key": config["s3"]["products_key"],
             "run_id": config["estimator_config"]["static_params"]["run_id"],
             "model_save_loc": config["post_process_config"]["model_artifact"],
         },

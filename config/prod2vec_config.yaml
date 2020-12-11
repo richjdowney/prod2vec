@@ -18,39 +18,26 @@ s3:
 
   # Config for s3
   bucket: "instacart-kaggle-data"
-  orders_key: "order_products__train.csv"
-  products_key: "products.csv"
-  couples_list_train_key: "couples_list_train.txt"
-  couples_list_valid_key: "couples_list_valid.txt"
-  labels_list_train_key: "labels_list_train.txt"
-  labels_list_valid_key: "labels_list_valid.txt"
-  prod_target_train_key: "prod_target_train.csv"
-  prod_target_valid_key: "prod_target_valid.csv"
-  prod_context_train_key: "prod_context_train.csv"
-  prod_context_valid_key: "prod_context_valid.csv"
-  reversed_dict_key: "reversed_dictionary.pkl"
-  products_dict_key: "products_dict.pkl"
 
 preprocess_constants:
 
   # Config for data pre-processing
   num_prods: 35000
-  train_ratio: 0.8
-  train_window_size: 20
-
+  train_window_size: 4
+  num_ns: 4
+  max_basket_length: 50
 
 estimator_config:
 
   # Config for training and tuning estimator
   static_params:
-    run_id: '14'
+    run_id: '26'
     entry_point: "/home/ubuntu/prod2vec/pipeline/model_train/model_train.py"
     run_hyperparameter_opt: "no"
-    epochs: 300000
-    num_folds: 5
+    epochs: 15
     valid_size: 100
     valid_window: 1000
-    cross_validate: False
+    batch_size: 128
     metric_definitions:
     - Name: loss
       Regex: "loss: ([0-9\\.]+)"
@@ -60,12 +47,12 @@ estimator_config:
     embeddings: 1024
     learning_rate: 0.001
   tune_hyperparameters:
-    max_jobs: 50
+    max_jobs: 5
     max_parallel_jobs: 5
     min_embeddings: 100
-    max_embeddings: 500
+    max_embeddings: 1024
     min_learning_rate: 0.0001
-    max_learning_rate: 0.5
+    max_learning_rate: 0.001
   inputs:
     train: "s3://instacart-kaggle-data"
 
